@@ -162,7 +162,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
         }
     }
     _packet_size.resize(_classes, _packet_size.back());
-
+// AMIR GOFT IN RO AVAZ KON
     string packet_size_rate_str = config.GetStr("packet_size_rate");
     if(packet_size_rate_str.empty()) {
         int rate = config.GetInt("packet_size_rate");
