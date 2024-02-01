@@ -1749,116 +1749,6 @@ void fully_adaptive_torus( const Router *r, const Flit *f, int in_channel,
   outputs->AddRange( out_port, vcBegin, vcEnd );
 }
 
-void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
-                           OutputSet *outputs, bool inject)
-{
-  int vcBegin = 0, vcEnd = gNumVCs - 1;
-  if (f->type == Flit::READ_REQUEST)
-  {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  }
-  else if (f->type == Flit::WRITE_REQUEST)
-  {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  }
-  else if (f->type == Flit::READ_REPLY)
-  {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  }
-  else if (f->type == Flit::WRITE_REPLY)
-  {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
-  }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
-  outputs->Clear();
-
-  if (inject)
-  {
-    // injection can use all VCs
-    outputs->AddRange(-1, vcBegin, vcEnd);
-    return;
-  }
-  else if (r->GetID() == f->dest)
-  {
-    // ejection can also use all VCs
-    outputs->AddRange(2 * gN, vcBegin, vcEnd);
-  }
-
-  int in_vc;
-  if (in_channel == 2 * gN)
-  {
-    in_vc = vcEnd; // ignore the injection VC
-  }
-  else
-  {
-    in_vc = f->vc;
-  }
-
-  int cur = r->GetID();
-  int dest = f->dest;
-
-  int out_port;
-
-  if (in_vc > (vcBegin + 1)) {
-    int dim_left[gN] = {};
-    int dim_left_cur[gN] = {};
-    int dim_left_dest[gN] = {};
-    int dim;
-    int dist2;
-    int arrived_at_dest = 1;
-    for (dim = 0; dim < gN; ++dim) {
-      if ((cur % gK) != (dest % gK)) {
-        dim_left[dim] = 1;
-        dim_left_cur[dim] = cur % gK;
-        dim_left_dest[dim] = dest % gK;
-      }
-      cur /= gK;
-      dest /= gK;
-    }
-    for (int i = 0; i < gN; i++) {
-      if (dim_left[i] == 1) {
-        arrived_at_dest = 0;
-        break;
-      }
-    }
-
-    if (arrived_at_dest == 0) {
-      dim = getRandomOneIndex(dim_left);
-      cur = dim_left_cur[dim];
-      dest = dim_left_dest[dim];
-      dist2 = gK - 2 * ((dest - cur + gK) % gK);
-
-      if ((dist2 > 0) ||
-          ((dist2 == 0) && (RandomInt(1)))) {
-        out_port = 2 * dim; // Right
-
-      } else {
-        out_port = 2 * dim + 1; // Left
-
-      }
-      outputs->AddRange(out_port, vcBegin + 3, vcEnd, 1);
-    }
-
-    dor_next_torus(r->GetID(), f->dest, 2 * gN,
-                   &out_port, &f->ph, false);
-  } else {
-    dor_next_torus(cur, dest, in_channel,
-                   &out_port, &f->ph, false);
-  }
-
-  if (f->ph == 0) {
-    outputs->AddRange(out_port, vcBegin, vcBegin, 0);
-  } else {
-    outputs->AddRange(out_port, vcBegin + 1, vcBegin + 1, 0);
-  }
-
-}
-
 //=============================================================
 
 void dim_order_ni_torus( const Router *r, const Flit *f, int in_channel, 
@@ -2254,7 +2144,6 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["dim_order_pni_mesh"]  = &dim_order_pni_mesh;
   gRoutingFunctionMap["dim_order_torus"] = &dim_order_torus;
   gRoutingFunctionMap["fully_adaptive_torus"] = &fully_adaptive_torus;
-    gRoutingFunctionMap["fully_adaptive2_torus"] = &fully_adaptive2_torus;
   gRoutingFunctionMap["dim_order_ni_torus"] = &dim_order_ni_torus;
   gRoutingFunctionMap["dim_order_bal_torus"] = &dim_order_bal_torus;
 
