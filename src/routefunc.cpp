@@ -143,15 +143,24 @@ int getRandomInteger(int R) {
 
 
 int getRandomOneIndex(const int array[]) {
+
+    vector<int> one_indices;
+    for (int i = 0; i < array.size(); ++i) {
+        if (array[i] == 1) {
+            one_indices.push_back(i);
+        }
+    }
+    int index = getRandomInteger(one_indices.size()-1);
+    return index;
     // Find indices of 1s in the array
-    int index;
-    while(1){
-      index = getRandomInteger(gN - 1);
-      if (array[index] == 1){
-        return index;
-      }
-    }
-    }
+    // int index;
+    // while(1){
+    //   index = getRandomInteger(gN - 1);
+    //   if (array[index] == 1){
+    //     return index;
+    //   }
+    // }
+  }
 
 
 
@@ -1753,23 +1762,16 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
                            OutputSet *outputs, bool inject)
 {
   int vcBegin = 0, vcEnd = gNumVCs - 1;
-  if (f->type == Flit::READ_REQUEST)
-  {
+  if (f->type == Flit::READ_REQUEST) {
     vcBegin = gReadReqBeginVC;
     vcEnd = gReadReqEndVC;
-  }
-  else if (f->type == Flit::WRITE_REQUEST)
-  {
+  } else if (f->type == Flit::WRITE_REQUEST) {
     vcBegin = gWriteReqBeginVC;
     vcEnd = gWriteReqEndVC;
-  }
-  else if (f->type == Flit::READ_REPLY)
-  {
+  } else if (f->type == Flit::READ_REPLY) {
     vcBegin = gReadReplyBeginVC;
     vcEnd = gReadReplyEndVC;
-  }
-  else if (f->type == Flit::WRITE_REPLY)
-  {
+  } else if (f->type == Flit::WRITE_REPLY){
     vcBegin = gWriteReplyBeginVC;
     vcEnd = gWriteReplyEndVC;
   }
@@ -1777,25 +1779,19 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
 
   outputs->Clear();
 
-  if (inject)
-  {
+  if (inject) {
     // injection can use all VCs
     outputs->AddRange(-1, vcBegin, vcEnd);
     return;
-  }
-  else if (r->GetID() == f->dest)
-  {
+  } else if (r->GetID() == f->dest) {
     // ejection can also use all VCs
     outputs->AddRange(2 * gN, vcBegin, vcEnd);
   }
 
   int in_vc;
-  if (in_channel == 2 * gN)
-  {
+  if (in_channel == 2 * gN) {
     in_vc = vcEnd; // ignore the injection VC
-  }
-  else
-  {
+  } else {
     in_vc = f->vc;
   }
 
