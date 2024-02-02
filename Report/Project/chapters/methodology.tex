@@ -1,0 +1,204 @@
+
+\فصل{پیاده‌سازی}
+
+
+از آن‌جایی که خود توپولوژی \lr{Torus} در \lr{Booksim} پیاده‌سازی شده است، پیاده‌سازی ما معطوف به قسمت مسیریابی خواهد بود. با خواندن \verb*|routerfunc| ایده و شکل کلی نوشتن توابع مربوط به  را بدست می‌اوریم. مهم‌ترین نکته این است که شیوه \lr{Duato}، یا به بیان مورد استفاده در شبیه‌ساز \lr{Escape VC}، در الگوریتم \verb*|min_adaptive_torus| هم به کار رفته است و می‌توانیم از آن الگو بگیریم.
+
+
+به طور خلاصه، کاری که برای پیاده‌سازی \lr{Duato} انجام می‌شود این است که دو کانال مجازی اول به الگوریتم
+\lr{ Deadlock Free‌}
+  تعلق می‌گیرند. برای این کار از الگوریتم 
+  \lr{Dimension Order Routing} که در خود \lr{Booksim} پیاده‌سازی شده است استفاده می‌کنیم. سایر کانال‌های مجازی را به پیاده‌سازی الگوریتم \lr{Fully-Adaptive} اختصاص می‌دهیم.
+
+بدین منظور بخش‌های مختلف کد که در تابع \verb*|fully_adaptive_torus| نوشته شده‌اند را مورد بررسی قرار می‌دهیم.
+
+\begin{latin}
+	\begin{lstlisting}[language = c++]
+  void fully_adaptive2_torus( const Router *r, const Flit *f, 
+  
+  int in_channel, OutputSet *outputs, bool inject ){
+int vcBegin = 0, vcEnd = gNumVCs-1;
+if ( f->type == Flit::READ_REQUEST ) {
+	vcBegin = gReadReqBeginVC;
+	vcEnd = gReadReqEndVC;
+} else if ( f->type == Flit::WRITE_REQUEST ) {
+	vcBegin = gWriteReqBeginVC;
+	vcEnd = gWriteReqEndVC;
+} else if ( f->type ==  Flit::READ_REPLY ) {
+	vcBegin = gReadReplyBeginVC;
+	vcEnd = gReadReplyEndVC;
+} else if ( f->type ==  Flit::WRITE_REPLY ) {
+	vcBegin = gWriteReplyBeginVC;
+	vcEnd = gWriteReplyEndVC;
+}
+assert(((f->vc >= vcBegin) &&
+ (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+
+outputs->Clear( );
+	\end{lstlisting}
+\end{latin}
+
+این قسمت در ابتدای همه توابع مسیریابی وجود دارد و مربوط به این است که بسته به نوع فلیت، کانال‌های آن تعیین بشود. ما هم این را در کد خودمان قرار داده‌ایم ولی عملا در کاربرد ما خیلی این مورد بررسی نمی‌شود و به شکل کلی می‌توانیم در بررسی‌های خود \verb*|vcBegin| را معادل $0$ و \verb*|vcEnd| را هم معادل تعداد کانال‌ها منهای یک در نظر بگیریم. در خط آخر هم مجموعه \lr{Output} خالی شده است. این مجموعه اصلی‌ترین خروجی تابع است که مشخص می‌کند خروجی‌های هر کدام از بخش‌های روتر باید از کدام کانال خارج شوند و عملا کانال و جهت خروجی را تعیین می‌کند.
+
+
+
+\begin{latin}
+	\begin{lstlisting}[language = c++]
+
+if(inject) {
+	// injection can use all VCs
+	outputs->AddRange(-1, vcBegin, vcEnd);
+	return;
+} else if(r->GetID() == f->dest) {
+	// ejection can also use all VCs
+	outputs->AddRange(2*gN, vcBegin, vcEnd);
+}
+
+int in_vc;
+if ( in_channel == 2*gN ) {
+	in_vc = vcEnd; // ignore the injection VC
+} else {
+	in_vc = f->vc;
+}
+
+int cur = r->GetID( );
+int dest = f->dest;
+
+int out_port;
+int dim_left[gN] = {};
+int dim_left_cur[gN] = {};
+int dim_left_dest[gN] = {};
+int dim_left_cur2[gN] = {};
+int dim_left_dest2[gN] = {};
+int dim;
+		\end{lstlisting}
+	\end{latin}
+
+این قسمت هم در سایر توابع مربوط به \lr{Torus} آورده شده است. دو if اول عملا برای مشخص کردن وضعیت \lr{Injection} و \lr{Ejection} از سوئیچ هستند.  شرط بعدی برای حالتی است که کانال ورودی عملا آخرین کانال باشد. و در نهایت یکسری متغیر که در قسمت‌های بعدی استفاده می‌شوند تعریف شده است.
+
+
+\begin{latin}
+	\begin{lstlisting}[language = c++]
+		
+if ( in_vc > ( vcBegin + 1 ) ) {
+	part1
+}
+
+	\end{lstlisting}
+\end{latin}
+
+
+این شرط، برای این است که دو کانال اول برای حالت
+\lr{ Deadlock Free}
+  استفاده شده و سایر کانال‌ها برای الگوریتم \lr{Fully Adaptive}
+استفاده شده‌اند.
+
+
+
+\begin{latin}
+	\begin{lstlisting}[language = c++]
+//part1.1
+
+ int dist2;
+int arrived_at_dest = 1;
+for (dim = 0; dim < gN; ++dim) {
+	if ((cur % gK) != (dest % gK)) {
+		dim_left[dim] = 1;
+		dim_left_cur[dim] = cur;
+		dim_left_dest[dim] = dest ;
+		
+		dim_left_cur2[dim] = cur % gK;
+		dim_left_dest2[dim] = dest % gK;
+		
+	}
+	cur /= gK;
+	dest /= gK;
+}
+for (int i = 0; i < gN; i++) {
+	if (dim_left[i] == 1) {
+		arrived_at_dest = 0;
+		break;
+	}
+}
+	\end{lstlisting}
+\end{latin}
+
+
+در این قسمت در هر بعد اختلاف مقصد و نقطه فعلی را بررسی می‌کنیم. در صورتی که در جایی اختلاف داشته باشند، مشخص می‌کنیم که آن نقطه کدام است و این نقاط را در یک آرایه نگه می‌داریم. توجه کنید که دو آرایه داریم که یکی مقدار اولیه و باقی‌مانده مقدار اولیه بر $k$ را نگه می‌دارد. این موضوع به دلیل این است که در آینده هم به باقی‌مانده آن بر $k$ نیاز داریم و هم خودش. (این قسمت عملا تعمیم یافته الگوریتم \verb*|min_adapt| خود \lr{booksim} است.)
+
+
+
+\begin{latin}
+	\begin{lstlisting}[language = c++]
+//part1.2
+		
+if (arrived_at_dest == 0) {
+dim = getRandomOneIndex(dim_left);
+cur = dim_left_cur[dim];
+dest = dim_left_dest[dim];
+
+int cur2 = dim_left_cur2[dim];
+int dest2 = dim_left_dest2[dim];
+
+dist2 = gK - 2 * ((dest2 - cur2 + gK) % gK);
+
+if ((dist2 > 0) ||
+((dist2 == 0) && (RandomInt(1))))
+{
+	out_port = 2 * dim; // Right
+	
+} else {
+	out_port = 2 * dim + 1; // Left
+	
+}
+// printf("HELLO %d %d\n" , vcBegin, vcEnd );
+outputs->AddRange(out_port, vcBegin + 3, vcEnd,1);
+}
+	\end{lstlisting}
+\end{latin}
+
+
+در این قسمت، از بین خانه‌هایی که پیدا کرده‌ایم که در آن بعد برابر نیستند، یکی را به تصادف انتخاب کرده، و سپس این که از سمت چپ یا راست \lr{Torus} نزدیک‌تر است را محاسبه می‌کنیم و بر همین اساس از کانال مربوطه آن را انتقال می‌دهیم. (برای کانال راست از 
+\verb*|2 * dim|
+و برای کانال چپ از
+\verb*|2 * dim +1|
+)
+استفاده می‌کنیم.
+
+
+
+عملا کاری که این‌جا انجام شده مشابه کاری است که در کدهای از قبل آماده شده \lr{Booksim} در الگوریتم \verb*|min_adapt_torus| انجام شده ولی به جای این که برای اولین خانه‌ای که اختلاف دارد انجام بشود، برای همه انجام می‌دهیم و سپس بین آن‌هایی که اختلاف وجود دارد یکی را به تصادف انتخاب می‌کنیم.
+
+
+\begin{latin}
+	\begin{lstlisting}[language = c++]
+   dor_next_torus(r->GetID(), f->dest, 2 * gN,
+&out_port, &f->ph, false);
+} else {
+dor_next_torus(cur, dest, in_channel,
+&out_port, &f->ph, false);
+}
+
+if(cur != dest) {
+
+  if (f->ph == 0) {
+	outputs->AddRange(out_port, vcBegin, vcBegin, 0);
+} else {
+	outputs->AddRange(out_port, vcBegin + 1, vcBegin + 1, 0);
+}
+
+	\end{lstlisting}
+\end{latin}
+
+
+در انتها براساس \lr{DOR} هم مسیریابی انجام شده است و بر روی دو کانال اول مسیریابی مربوط به آن قرار گرفته است.  توجه کنید که منطق قسمت آخر دقیقا مشابه الگوریتمی که در کد خود \lr{Booksim} برای \verb*|min_adapt_torus| استفاده شده است نوشته شده است و برای \lr{Deadlock Free}‌ کردن است.
+
+
+
+
+
+
+
+
+

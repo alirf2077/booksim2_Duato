@@ -147,20 +147,11 @@ int getRandomOneIndex(const int array[]) {
     vector<int> one_indices;
     for (int i = 0; i < gN; ++i) {
         if (array[i] == 1) {
-          return i;
             one_indices.push_back(i);
         }
     }
     int index = getRandomInteger(one_indices.size()-1);
     return index;
-    // Find indices of 1s in the array
-    // int index;
-    // while(1){
-    //   index = getRandomInteger(gN - 1);
-    //   if (array[index] == 1){
-    //     return index;
-    //   }
-    // }
   }
 
 
@@ -685,65 +676,6 @@ void dor_next_torus( int cur, int dest, int in_port,
   }
 }
 //=============================================================
-
-void fully_adaptive_next_torus( int cur, int dest, int in_port,
-		     int *out_port, int *partition,
-		     bool balance = false )
-{
-  int dim_left[gN] = {};
-  int dim_left_cur[gN] = {};
-  int dim_left_dest[gN] = {};
-  int dim;
-  int dir;
-  int dist2;
-  int arrived_at_dest = 1;
-
-  for ( dim = 0; dim < gN; ++dim ) {
-    if ( ( cur % gK ) != ( dest % gK ) ) {
-      dim_left[dim] = 1;
-      dim_left_cur[dim] = cur % gK;
-      dim_left_dest[dim] = dest % gK;
-     }
-    cur /= gK; dest /= gK;
-  }
-  
-  for (int i = 0 ; i < gN ; i++){
-    if(dim_left[i] == 1){
-      arrived_at_dest = 0;
-      break;
-    }
-  }
-
-  // for (int i = 0; i < gN ; i++){
-  //   printf("at %d is : %d\n", i , dim_left[i]);
-  // }
-
-
-  if ( arrived_at_dest == 0 ) {
-    dim_left;
-    dim = getRandomOneIndex(dim_left);
-    // printf("dim is %d\n",dim);
-    // fflush(stdout);
-
-      cur = dim_left_cur[dim];
-      dest = dim_left_dest[dim];
-
-      dist2 = gK - 2 * ( ( dest - cur + gK ) % gK );
-      
-      if ( ( dist2 > 0 ) || 
-	   ( ( dist2 == 0 ) && ( RandomInt( 1 ) ) ) ) {
-	*out_port = 2*dim;     // Right
-	dir = 0;
-      } else {
-	*out_port = 2*dim + 1; // Left
-	dir = 1;
-      }
-    
-
-  } else {
-    *out_port = 2*gN;  // Eject
-  }
-}
 
 //=============================================================
 
@@ -2198,7 +2130,6 @@ void InitializeRoutingMap( const Configuration & config )
   gRoutingFunctionMap["dim_order_ni_mesh"]  = &dim_order_ni_mesh;
   gRoutingFunctionMap["dim_order_pni_mesh"]  = &dim_order_pni_mesh;
   gRoutingFunctionMap["dim_order_torus"] = &dim_order_torus;
-  gRoutingFunctionMap["fully_adaptive_torus"] = &fully_adaptive_torus;
     gRoutingFunctionMap["fully_adaptive2_torus"] = &fully_adaptive2_torus;
   gRoutingFunctionMap["dim_order_ni_torus"] = &dim_order_ni_torus;
   gRoutingFunctionMap["dim_order_bal_torus"] = &dim_order_bal_torus;
