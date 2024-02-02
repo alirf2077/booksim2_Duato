@@ -145,8 +145,9 @@ int getRandomInteger(int R) {
 int getRandomOneIndex(const int array[]) {
 
     vector<int> one_indices;
-    for (int i = 0; i < array.size(); ++i) {
+    for (int i = 0; i < gN; ++i) {
         if (array[i] == 1) {
+          return i;
             one_indices.push_back(i);
         }
     }
@@ -1798,13 +1799,16 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
   int cur = r->GetID();
   int dest = f->dest;
 
-  int out_port;
 
-  if (in_vc > (vcBegin + 1)) {
+  int out_port;
     int dim_left[gN] = {};
     int dim_left_cur[gN] = {};
     int dim_left_dest[gN] = {};
-    int dim;
+    int dim_left_cur2[gN] = {};
+    int dim_left_dest2[gN] = {};
+      int dim;
+  if (in_vc > (vcBegin + 1)) {
+
     int dist2;
     int arrived_at_dest = 1;
     for (dim = 0; dim < gN; ++dim) {
@@ -1812,6 +1816,10 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
         dim_left[dim] = 1;
         dim_left_cur[dim] = cur % gK;
         dim_left_dest[dim] = dest % gK;
+
+        dim_left_cur2[dim] = cur;
+        dim_left_dest2[dim] = dest;
+
       }
       cur /= gK;
       dest /= gK;
@@ -1825,19 +1833,25 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
 
     if (arrived_at_dest == 0) {
       dim = getRandomOneIndex(dim_left);
-      cur = dim_left_cur[dim];
-      dest = dim_left_dest[dim];
-      dist2 = gK - 2 * ((dest - cur + gK) % gK);
+      cur = dim_left_cur2[dim];
+      dest = dim_left_dest2[dim];
+
+      int cur2 = dim_left_cur[dim];
+      int dest2 = dim_left_dest[dim];
+
+      dist2 = gK - 2 * ((dest2 - cur2 + gK) % gK);
 
       if ((dist2 > 0) ||
-          ((dist2 == 0) && (RandomInt(1)))) {
+          ((dist2 == 0) && (RandomInt(1))))
+           {
         out_port = 2 * dim; // Right
 
       } else {
         out_port = 2 * dim + 1; // Left
 
       }
-      outputs->AddRange(out_port, vcBegin + 3, vcEnd, 1);
+      // printf("HELLO %d %d\n" , vcBegin, vcEnd );
+      outputs->AddRange(out_port, vcBegin + 3, vcEnd,1);
     }
 
     dor_next_torus(r->GetID(), f->dest, 2 * gN,
@@ -1847,11 +1861,13 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
                    &out_port, &f->ph, false);
   }
 
+
   if (f->ph == 0) {
     outputs->AddRange(out_port, vcBegin, vcBegin, 0);
   } else {
     outputs->AddRange(out_port, vcBegin + 1, vcBegin + 1, 0);
   }
+
 
 }
 

@@ -29,12 +29,12 @@
 
 // Topology
 topology = torus;
-k = 32;
+k = 16;
 n = 2;
 // Routing
 routing_function = fully_adaptive2;
 // Flow control
-num_vcs = 4;
+num_vcs = 8;
 // Traffic
 traffic = uniform;
 injection_rate = 0.999;
