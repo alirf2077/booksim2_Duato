@@ -29,7 +29,7 @@
 
 // Topology
 topology = torus;
-k = 16;
+k = 20;
 n = 2;
 // Routing
 routing_function = fully_adaptive2;

@@ -1691,73 +1691,6 @@ void dim_order_torus( const Router *r, const Flit *f, int in_channel,
 
 //=============================================================
 
-void fully_adaptive_torus( const Router *r, const Flit *f, int in_channel, 
-		      OutputSet *outputs, bool inject )
-{
-  int vcBegin = 0, vcEnd = gNumVCs-1;
-  if ( f->type == Flit::READ_REQUEST ) {
-    vcBegin = gReadReqBeginVC;
-    vcEnd = gReadReqEndVC;
-  } else if ( f->type == Flit::WRITE_REQUEST ) {
-    vcBegin = gWriteReqBeginVC;
-    vcEnd = gWriteReqEndVC;
-  } else if ( f->type ==  Flit::READ_REPLY ) {
-    vcBegin = gReadReplyBeginVC;
-    vcEnd = gReadReplyEndVC;
-  } else if ( f->type ==  Flit::WRITE_REPLY ) {
-    vcBegin = gWriteReplyBeginVC;
-    vcEnd = gWriteReplyEndVC;
-  }
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
-  int out_port;
-
-  if(inject) {
-
-    out_port = -1;
-
-  } else {
-    
-    int cur  = r->GetID( );
-    int dest = f->dest;
-
-    fully_adaptive_next_torus( cur, dest, in_channel,
-		    &out_port, &f->ph, false );
-
-      // printf("packet outport is : %d\n", out_port);
-      // fflush(stdout);
-
-    // at the destination router, we don't need to separate VCs by ring partition
-  //   if(cur != dest) {
-
-  //     int const available_vcs = (vcEnd - vcBegin + 1) / 2;
-  //     assert(available_vcs > 0);
-
-  //     if ( f->ph == 0 ) {
-	// vcEnd -= available_vcs;
-  //     } else {
-	// vcBegin += available_vcs;
-  //     } 
-  //   }
-
-    if ( f->watch ) {
-      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
-		 << "Adding VC range [" 
-		 << vcBegin << "," 
-		 << vcEnd << "]"
-		 << " at output port " << out_port
-		 << " for flit " << f->id
-		 << " (input port " << in_channel
-		 << ", destination " << f->dest << ")"
-		 << "." << endl;
-    }
-
-  }
- 
-  outputs->Clear( );
-
-  outputs->AddRange( out_port, vcBegin, vcEnd );
-}
 
 void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
                            OutputSet *outputs, bool inject)
@@ -1801,12 +1734,12 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
 
 
   int out_port;
-    int dim_left[gN] = {};
-    int dim_left_cur[gN] = {};
-    int dim_left_dest[gN] = {};
-    int dim_left_cur2[gN] = {};
-    int dim_left_dest2[gN] = {};
-      int dim;
+  int dim_left[gN] = {};
+  int dim_left_cur[gN] = {};
+  int dim_left_dest[gN] = {};
+  int dim_left_cur2[gN] = {};
+  int dim_left_dest2[gN] = {};
+  int dim;
   if (in_vc > (vcBegin + 1)) {
 
     int dist2;
@@ -1814,11 +1747,11 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
     for (dim = 0; dim < gN; ++dim) {
       if ((cur % gK) != (dest % gK)) {
         dim_left[dim] = 1;
-        dim_left_cur[dim] = cur % gK;
-        dim_left_dest[dim] = dest % gK;
+        dim_left_cur[dim] = cur;
+        dim_left_dest[dim] = dest ;
 
-        dim_left_cur2[dim] = cur;
-        dim_left_dest2[dim] = dest;
+        dim_left_cur2[dim] = cur % gK;
+        dim_left_dest2[dim] = dest % gK;
 
       }
       cur /= gK;
@@ -1833,11 +1766,11 @@ void fully_adaptive2_torus(const Router *r, const Flit *f, int in_channel,
 
     if (arrived_at_dest == 0) {
       dim = getRandomOneIndex(dim_left);
-      cur = dim_left_cur2[dim];
-      dest = dim_left_dest2[dim];
+      cur = dim_left_cur[dim];
+      dest = dim_left_dest[dim];
 
-      int cur2 = dim_left_cur[dim];
-      int dest2 = dim_left_dest[dim];
+      int cur2 = dim_left_cur2[dim];
+      int dest2 = dim_left_dest2[dim];
 
       dist2 = gK - 2 * ((dest2 - cur2 + gK) % gK);
 
