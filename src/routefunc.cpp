@@ -147,17 +147,162 @@ int getRandomOneIndex(const int array[]) {
     vector<int> one_indices;
     for (int i = 0; i < gN; ++i) {
         if (array[i] == 1) {
-            return i;
+            // return i;
             one_indices.push_back(i);
         }
     }
     int index = getRandomInteger(one_indices.size()-1);
-    return index;
+    return one_indices[index];
   }
 
 
 
+int getRandomInteger2(int R) {
+    // Use a random_device to seed the random number engine
+    std::random_device rd;
 
+    // Use the Mersenne Twister engine for randomness
+    std::mt19937 gen(rd());
+
+    // Define the distribution for integers in the range [0, R]
+    std::uniform_int_distribution<> dis(0, R);
+
+    // Generate a random integer
+    return dis(gen);
+}
+
+
+//============================================================
+
+
+int getRandomOneIndex2(const int array[]) {
+    // Find indices of 1s in the array
+    int index;
+    while(1){
+      index = getRandomInteger(gN - 1);
+      if (array[index] == 1){
+        return index;
+      }
+    }
+    }
+
+
+
+
+
+void fully_adaptive_next_torus( int cur, int dest, int in_port,
+		     int *out_port, int *partition,
+		     bool balance = false )
+{
+  int dim_left[gN] = {};
+  int dim_left_cur[gN] = {};
+  int dim_left_dest[gN] = {};
+  int dim;
+  int dir;
+  int dist2;
+  int arrived_at_dest = 1;
+
+  for ( dim = 0; dim < gN; ++dim ) {
+    if ( ( cur % gK ) != ( dest % gK ) ) {
+      dim_left[dim] = 1;
+      dim_left_cur[dim] = cur % gK;
+      dim_left_dest[dim] = dest % gK;
+     }
+    cur /= gK; dest /= gK;
+  }
+
+  for (int i = 0 ; i < gN ; i++){
+    if(dim_left[i] == 1){
+      arrived_at_dest = 0;
+      break;
+    }
+  }
+
+  // for (int i = 0; i < gN ; i++){
+  //   printf("at %d is : %d\n", i , dim_left[i]);
+  // }
+
+
+  if ( arrived_at_dest == 0 ) {
+    dim_left;
+    dim = getRandomOneIndex2(dim_left);
+    // printf("dim is %d\n",dim);
+    // fflush(stdout);
+
+      cur = dim_left_cur[dim];
+      dest = dim_left_dest[dim];
+
+      dist2 = gK - 2 * ( ( dest - cur + gK ) % gK );
+
+      if ( ( dist2 > 0 ) || 
+	   ( ( dist2 == 0 ) && ( RandomInt( 1 ) ) ) ) {
+	*out_port = 2*dim;     // Right
+	dir = 0;
+      } else {
+	*out_port = 2*dim + 1; // Left
+	dir = 1;
+      }
+
+
+  } else {
+    *out_port = 2*gN;  // Eject
+  }
+}
+
+
+void fully_adaptive_torus( const Router *r, const Flit *f, int in_channel, 
+		      OutputSet *outputs, bool inject )
+{
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+  int out_port;
+
+  if(inject) {
+
+    out_port = -1;
+
+  } else {
+
+    int cur  = r->GetID( );
+    int dest = f->dest;
+
+    fully_adaptive_next_torus( cur, dest, in_channel,
+		    &out_port, &f->ph, false );
+
+
+
+    if ( f->watch ) {
+      *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
+		 << "Adding VC range [" 
+		 << vcBegin << "," 
+		 << vcEnd << "]"
+		 << " at output port " << out_port
+		 << " for flit " << f->id
+		 << " (input port " << in_channel
+		 << ", destination " << f->dest << ")"
+		 << "." << endl;
+    }
+
+  }
+
+  outputs->Clear( );
+
+  outputs->AddRange( out_port, vcBegin, vcEnd );
+}
 
 // ============================================================
 //  Tree4: Nearest Common Ancestor w/ Adaptive Routing Up
@@ -2140,7 +2285,7 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["min_adapt_mesh"]   = &min_adapt_mesh;
   gRoutingFunctionMap["min_adapt_torus"]  = &min_adapt_torus;
-
+ gRoutingFunctionMap["fully_adaptive_torus"] = &fully_adaptive_torus;
   gRoutingFunctionMap["planar_adapt_mesh"] = &planar_adapt_mesh;
 
   // FIXME: This is broken.
