@@ -147,6 +147,7 @@ int getRandomOneIndex(const int array[]) {
     vector<int> one_indices;
     for (int i = 0; i < gN; ++i) {
         if (array[i] == 1) {
+            return i;
             one_indices.push_back(i);
         }
     }
